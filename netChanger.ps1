@@ -1,3 +1,10 @@
+# Check if we have privileges to change network settings
+$adminGroup = "S-1-5-32-544"
+$runningAsAdmin = [bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match $adminGroup)
+if (-not $runningAsAdmin) {
+    Write-Host "Running in read-only mode. Admin privileges required to change network settings."
+}
+
 # Load Windows Forms assembly
 Add-Type -AssemblyName System.Windows.Forms
 
@@ -28,6 +35,9 @@ $textBoxInfo.Location = New-Object System.Drawing.Point(260, 50)
 $textBoxInfo.Size = New-Object System.Drawing.Size(420, 200)
 $textBoxInfo.Multiline = $true
 $textBoxInfo.ReadOnly = $true
+if (-not $runningAsAdmin) {
+    $textBoxInfo.Text = "Read-only mode. Admin privileges required to change network settings."
+}
 
 $btnCaptureIP = New-Object System.Windows.Forms.Button
 $btnCaptureIP.Text = "Capture IP"
@@ -58,7 +68,8 @@ $btnCaptureIPtoSet.Add_Click({
 $btnSetDhcpLinkLocal = New-Object System.Windows.Forms.Button
 $btnSetDhcpLinkLocal.Text = "Set IP to Dynamic"
 $btnSetDhcpLinkLocal.Location = New-Object System.Drawing.Point(10, 300) 
-$btnSetDhcpLinkLocal.Size = New-Object System.Drawing.Size(670, 30)  
+$btnSetDhcpLinkLocal.Size = New-Object System.Drawing.Size(670, 30)
+$btnSetDhcpLinkLocal.Enabled = $runningAsAdmin  
 $btnSetDhcpLinkLocal.Add_Click({
     Set-DHCP-LinkLocal-IP
 })
@@ -66,7 +77,8 @@ $btnSetDhcpLinkLocal.Add_Click({
 $btnSetLinkLocal = New-Object System.Windows.Forms.Button
 $btnSetLinkLocal.Text = "Set to Force Link Local"
 $btnSetLinkLocal.Location = New-Object System.Drawing.Point(10, 340) 
-$btnSetLinkLocal.Size = New-Object System.Drawing.Size(670, 30) 
+$btnSetLinkLocal.Size = New-Object System.Drawing.Size(670, 30)
+$btnSetLinkLocal.Enabled = $runningAsAdmin 
 $btnSetLinkLocal.Add_Click({
     Set-RandomLinkLocal-IP
 })
@@ -155,7 +167,9 @@ function Get-SelectedInterfaceInfo {
         $textBoxInfo.Text = $infoText
 
         # Enable the "Capture to Set" button when an interface is selected
-        $btnCaptureIPtoSet.Enabled = $true
+        if ($runningAsAdmin) {
+            $btnCaptureIPtoSet.Enabled = $true
+        }
 
         # Set the text of the "Capture to Set" button to display the captured IP
         if ($CapturedIPs.ContainsKey($selectedInterface)) {
